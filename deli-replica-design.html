@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deli Container Replica Architecture — Fluid Framework</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --surface: #111827;
+      --surface-border: #1f2937;
+      --card-bg: #162032;
+      --card-border: #24344d;
+      --primary: #38bdf8;
+      --primary-glow: rgba(56, 189, 248, 0.2);
+      --secondary: #818cf8;
+      --accent: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --code-bg: #0b1120;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      padding: 32px 20px 80px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--surface-border);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--primary);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      max-width: 800px;
+    }
+
+    /* Section Grids */
+    .section-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 40px 0 20px;
+    }
+    .section-title .step-num {
+      background: var(--primary);
+      color: #000;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 800;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 24px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    /* Architecture Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Topic & Partition Visualizer */
+    .kafka-topic-box {
+      background: #0d1527;
+      border: 1px dashed #3b82f6;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .topic-name {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--primary);
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .partition-strip {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 6px;
+    }
+    .p-node {
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 10px 4px;
+      border-radius: 6px;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      transition: all 0.2s ease;
+    }
+    .p-node.assigned-p1 { border-color: #38bdf8; background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+    .p-node.assigned-p2 { border-color: #818cf8; background: rgba(129, 140, 248, 0.15); color: #818cf8; }
+    .p-node.assigned-p3 { border-color: #34d399; background: rgba(52, 211, 153, 0.15); color: #34d399; }
+    .p-node.assigned-p4 { border-color: #fbbf24; background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+
+    /* Pod Pods Mapping */
+    .pod-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .pod-card {
+      background: #0f172a;
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      padding: 14px;
+      position: relative;
+    }
+    .pod-card.p1 { border-top: 3px solid #38bdf8; }
+    .pod-card.p2 { border-top: 3px solid #818cf8; }
+    .pod-card.p3 { border-top: 3px solid #34d399; }
+    .pod-card.p4 { border-top: 3px solid #fbbf24; }
+
+    .pod-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .pod-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    .pod-chip {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 2px 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: #e2e8f0;
+    }
+
+    /* Pod Internal Breakdown */
+    .internal-box {
+      background: #0c1222;
+      border: 1px solid #1e2d4a;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .internal-title {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--primary);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .queue-flow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 6px 0;
+    }
+    .queue-item {
+      background: #1e293b;
+      border: 1px solid #475569;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+    .queue-arrow {
+      color: var(--text-muted);
+      font-weight: bold;
+    }
+
+    /* Scenario Badges */
+    .scenario-card {
+      background: #111a2d;
+      border: 1px solid #202d45;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .scenario-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .status-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .status-tag.ideal { background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+    .status-tag.multi { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
+    .status-tag.standby { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
+
+    /* Timeline */
+    .timeline {
+      position: relative;
+      margin-left: 20px;
+      padding-left: 24px;
+      border-left: 2px solid #24344d;
+    }
+    .timeline-step {
+      position: relative;
+      margin-bottom: 24px;
+    }
+    .timeline-dot {
+      position: absolute;
+      left: -33px;
+      top: 4px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--card-bg);
+      border: 2px solid var(--primary);
+    }
+    .timeline-dot.danger { border-color: var(--danger); background: var(--danger); }
+    .timeline-dot.warning { border-color: var(--warning); background: var(--warning); }
+    .timeline-dot.success { border-color: var(--accent); background: var(--accent); }
+
+    .timeline-time {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .timeline-heading {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .timeline-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Code block */
+    pre.code-view {
+      background: var(--code-bg);
+      border: 1px solid #1f2a3e;
+      border-radius: 6px;
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #93c5fd;
+      overflow-x: auto;
+      margin-top: 10px;
+    }
+
+    /* Key Invariants Table */
+    table.spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin-top: 10px;
+    }
+    table.spec-table th, table.spec-table td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid #1e293b;
+    }
+    table.spec-table th {
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+    }
+    table.spec-table td code {
+      font-family: var(--font-mono);
+      color: var(--primary);
+      background: rgba(56, 189, 248, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="badge">Architecture Blueprint • Routerlicious Core</div>
+      <h1>Deli Container Replica & Sharding Architecture</h1>
+      <p class="subtitle">
+        How Deli runs as a containerized microservice, balances Kafka partitions, maintains strict per-document monotonic ordering with <code>concurrency=1</code>, and executes zero-data-loss failover.
+      </p>
+    </header>
+
+    <!-- SECTION 1: TOPOLOGY & PARTITION MAPPING -->
+    <div class="section-title">
+      <span class="step-num">1</span>
+      <span>Cluster Topology: Kafka Partitions to Container Replicas</span>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+          Kafka Topic: rawdeltas (8 Partitions) &bull; Keyed by <code>murmur2(documentId)</code>
+        </span>
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Deterministic Hash Anchor</span>
+      </div>
+
+      <div class="kafka-topic-box">
+        <div class="topic-name">
+          <span>TOPIC: <strong>rawdeltas</strong></span>
+          <span>Consumer Group: <strong>deli</strong></span>
+        </div>
+        <div class="partition-strip">
+          <div class="p-node assigned-p1">P0</div>
+          <div class="p-node assigned-p1">P1</div>
+          <div class="p-node assigned-p2">P2</div>
+          <div class="p-node assigned-p2">P3</div>
+          <div class="p-node assigned-p3">P4</div>
+          <div class="p-node assigned-p3">P5</div>
+          <div class="p-node assigned-p4">P6</div>
+          <div class="p-node assigned-p4">P7</div>
+        </div>
+      </div>
+
+      <!-- Pods -->
+      <div class="pod-grid">
+        <div class="pod-card p1">
+          <div class="pod-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            Deli Pod #1
+          </div>
+          <div class="pod-meta">k8s-pod: deli-784f9b-w9k1</div>
+          <div class="pod-chip">Assigned: Partitions [0, 1]</div>
+        </div>
+
+        <div class="pod-card p2">
+          <div class="pod-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            Deli Pod #2
+          </div>
+          <div class="pod-meta">k8s-pod: deli-784f9b-c4x8</div>
+          <div class="pod-chip">Assigned: Partitions [2, 3]</div>
+        </div>
+
+        <div class="pod-card p3">
+          <div class="pod-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            Deli Pod #3
+          </div>
+          <div class="pod-meta">k8s-pod: deli-784f9b-m2p7</div>
+          <div class="pod-chip">Assigned: Partitions [4, 5]</div>
+        </div>
+
+        <div class="pod-card p4">
+          <div class="pod-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            Deli Pod #4
+          </div>
+          <div class="pod-meta">k8s-pod: deli-784f9b-r6j0</div>
+          <div class="pod-chip">Assigned: Partitions [6, 7]</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 OPERATIONAL SCENARIOS -->
+    <div style="margin-top: 24px;" class="grid-3">
+      <div class="scenario-card">
+        <div class="scenario-header">
+          <span style="font-weight: 700; color: #fff;">R = P (8 Pods, 8 Parts)</span>
+          <span class="status-tag ideal">1:1 Dedicated</span>
+        </div>
+        <p style="font-size: 0.82rem; color: var(--text-muted);">
+          Each container sequences exactly 1 partition. Dedicated CPU core isolation, no contention between active documents on different partitions.
+        </p>
+      </div>
+
+      <div class="scenario-card">
+        <div class="scenario-header">
+          <span style="font-weight: 700; color: #fff;">R &lt; P (4 Pods, 8 Parts)</span>
+          <span class="status-tag multi">1:Many Multi-Tenancy</span>
+        </div>
+        <p style="font-size: 0.82rem; color: var(--text-muted);">
+          Each pod instantiates multiple <code>Partition</code> objects in <code>PartitionManager</code>. Concurrency is shared within the Node.js event loop.
+        </p>
+      </div>
+
+      <div class="scenario-card">
+        <div class="scenario-header">
+          <span style="font-weight: 700; color: #fff;">R &gt; P (12 Pods, 8 Parts)</span>
+          <span class="status-tag standby">Idle Warm Standbys</span>
+        </div>
+        <p style="font-size: 0.82rem; color: var(--text-muted);">
+          Kafka assigns 0 partitions to the extra 4 pods. They sit idle as warm standbys ready to instantly claim partitions during node failure or rolling upgrade.
+        </p>
+      </div>
+    </div>
+
+    <!-- SECTION 2: INSIDE THE POD -->
+    <div class="section-title">
+      <span class="step-num">2</span>
+      <span>Inside a Deli Container Pod (Memory & Concurrency Architecture)</span>
+    </div>
+
+    <div class="grid-2">
+      <!-- In-Memory Process Box -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Process Topology & In-Memory State</span>
+          <span style="font-size: 0.75rem; color: var(--accent); font-family: var(--font-mono);">Soft-State (No PV/PVC)</span>
+        </div>
+
+        <div class="internal-box">
+          <div class="internal-title">
+            <span>PartitionManager (consumer.on("data"))</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">
+            Routes message by <code>message.partition</code> to the dedicated partition queue.
+          </p>
+          <div class="queue-flow">
+            <span class="queue-item" style="color: var(--primary);">msg.partition = 1</span>
+            <span class="queue-arrow">&rarr;</span>
+            <span class="queue-item" style="border-color: var(--primary);">Partition(1).process()</span>
+            <span class="queue-arrow">&rarr;</span>
+            <span class="queue-item">queue(concurrency = 1)</span>
+          </div>
+        </div>
+
+        <div class="internal-box">
+          <div class="internal-title">
+            <span>DocumentRouter (DocumentLambda)</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">
+            Demuxes ops into per-document instances: <code>Map&lt;tenantId/docId, DocumentPartition&gt;</code>
+          </p>
+          <pre class="code-view">
+// RAM State per Document:
+{
+  sequenceNumber: 10425,       // Monotonic sequencer
+  minSequenceNumber: 10410,    // MSN watermark
+  clients: ["user-1", "user-2"],// Collaborators
+  activityTimeout: 600000      // 10m idle eviction
+}</pre>
+        </div>
+
+        <div style="font-size: 0.8rem; color: var(--text-muted); border-left: 2px solid var(--accent); padding-left: 10px; margin-top: 12px;">
+          <strong>RAM Protection:</strong> Inactive documents are flushed to MongoDB and deleted from RAM via <code>inactivityCheck()</code> to prevent Node.js OOM.
+        </div>
+      </div>
+
+      <!-- Durability & State Table -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">State Durability & Failover Invariants</span>
+        </div>
+        <table class="spec-table">
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Role</th>
+              <th>Guarantee</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Kafka rawdeltas</strong></td>
+              <td>Input buffer</td>
+              <td>Immutable unsequenced log. Replay source on crash.</td>
+            </tr>
+            <tr>
+              <td><strong>Deli Container</strong></td>
+              <td>Sequencer</td>
+              <td>Strict monotonic counter. <code>concurrency=1</code> per partition.</td>
+            </tr>
+            <tr>
+              <td><strong>Kafka deltas</strong></td>
+              <td>Output broadcast</td>
+              <td>Total Order Broadcast (ToB) for all clients and Scriptorium.</td>
+            </tr>
+            <tr>
+              <td><strong>MongoDB</strong></td>
+              <td>Durable checkpoint</td>
+              <td>Stores latest <code>sequenceNumber</code> and client roster.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="margin-top: 20px;" class="internal-box">
+          <div class="internal-title" style="color: var(--warning);">
+            <span>Why Deli Containers Don't Need Disks</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">
+            Because checkpoints live in MongoDB and the uncommitted delta log lives in Kafka, Deli pods are <strong>completely ephemeral</strong>. A pod can be killed with <code>SIGKILL</code> without losing a single sequence number or corrupting document state.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: RECOVERY TIMELINE -->
+    <div class="section-title">
+      <span class="step-num">3</span>
+      <span>Failover Lifecycle: When a Container Replica Dies</span>
+    </div>
+
+    <div class="card">
+      <div class="timeline">
+        <!-- Step 1 -->
+        <div class="timeline-step">
+          <div class="timeline-dot success"></div>
+          <div class="timeline-time">T0 — Normal Operations</div>
+          <div class="timeline-heading">Replica 2 runs Partition 1 (Active)</div>
+          <div class="timeline-desc">
+            Ops stream from <code>rawdeltas</code> into Pod 2. Monotonic sequence counter advances: <code>#500 &rarr; #501 &rarr; #502</code>. Checkpoints periodically saved to MongoDB.
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="timeline-step">
+          <div class="timeline-dot danger"></div>
+          <div class="timeline-time">T1 — Crash / Hardware Failure</div>
+          <div class="timeline-heading">Replica 2 Terminated (OOM / Pod Eviction)</div>
+          <div class="timeline-desc">
+            Heartbeat signal to Kafka ceases. Kafka Broker starts timer <code>session.timeout.ms</code> (default 10s or 45s).
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="timeline-step">
+          <div class="timeline-dot warning"></div>
+          <div class="timeline-time">T2 — Cooperative Rebalance</div>
+          <div class="timeline-heading">Kafka Group Coordinator Rebalances</div>
+          <div class="timeline-desc">
+            Kafka triggers <code>consumer.on("rebalancing")</code>. Surviving pods drain in-flight ops. Kafka’s <code>cooperative-sticky</code> assignor assigns orphaned <strong>Partition 1</strong> to surviving <strong>Replica 1</strong>.
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="timeline-step">
+          <div class="timeline-dot success"></div>
+          <div class="timeline-time">T3 — Hydration & Replay</div>
+          <div class="timeline-heading">Replica 1 Reconstructs State</div>
+          <div class="timeline-desc">
+            Replica 1 invokes <code>new Partition(1)</code> &rarr; reads checkpoint from MongoDB (`sequenceNumber: 502`) &rarr; seeks Kafka consumer to offset <code>503</code> &rarr; replays rawdeltas.
+          </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="timeline-step">
+          <div class="timeline-dot success"></div>
+          <div class="timeline-time">T4 — Full Recovery</div>
+          <div class="timeline-heading">Sequencing Resumes With Monotonic Guarantees</div>
+          <div class="timeline-desc">
+            Subsequent op gets sequenced as <code>#503</code>. Total recovery time &lt; a few seconds. Zero split-brain because Kafka enforces 1 consumer per partition.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
