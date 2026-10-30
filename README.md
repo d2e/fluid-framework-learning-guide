@@ -23,6 +23,8 @@ An interactive, deep-dive architectural learning portal and visual reference for
 8. **GitRest Snapshot Pipeline:** Client summarizer election, `ISummaryTree` generation, Git blobs/trees/commits, and new user catch-up flow (Git snapshot + Mongo deltas).
 9. **Multi-Tenant Scaling:** Riddler tenant sharding across clusters, within-tenant partition distribution, and 4-axis token-bucket rate limiting.
 10. **Recent Fluid 2.x Evolutions:** SharedTree Anchor Navigation 90%+ read optimizations, `ExtrinsicLocations` range tracking, and `SharedObjectCore` deprecation.
+11. **Boxcar Messaging & Batching:** `IBoxcarMessage` envelope, micro-batching via Node.js event-loop `setImmediate`, Kafka offset optimization, and MongoDB bulk inserts.
+12. **1-Hour Deep-Dive Technical Interview Script (Director & Distinguished Engineer):** 60-minute phased blueprint, whiteboard diagrams, verbatim spoken scripts, distributed consensus trap answers, and panel Q&A cheat sheet.
 
 ---
 
