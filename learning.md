@@ -329,6 +329,50 @@ if (clientSequenceNumber === expectedClientSequenceNumber) {
 ```
 * **Guarantees:** If Alfred or a client network retry produces the same raw op twice, Deli discards the second copy **before** any global sequence number can be assigned.
 
+### What is a Boxcar? (Kafka Op Batching & Coalescing)
+
+**File:** `server/routerlicious/packages/services-core/src/messages.ts:199`
+
+In Fluid Framework, a **Boxcar** (`IBoxcarMessage`) is the **batch envelope** used by the server to bundle multiple operations for a document into a single Kafka message payload.
+
+#### The Real-World Analogy
+Instead of sending 1 train locomotive down the track for every single letter you type, the train station puts all the letters inside **one train freight car (a "boxcar")** and sends them together down the tracks.
+
+```
+Individual Keystrokes:   ['H']   ['e']   ['l']   ['l']   ['o']
+                           │       │       │       │       │
+                           ▼       ▼       ▼       ▼       ▼
+                     ┌───────────────────────────────────────────┐
+Boxcar Envelope:     │            IBoxcarMessage                 │
+                     │  documentId: "doc-101"                    │
+                     │  contents: [ 'H', 'e', 'l', 'l', 'o' ]    │
+                     └─────────────────────┬─────────────────────┘
+                                           │
+                                           ▼ (1 single Kafka message)
+                                    [Kafka Broker]
+```
+
+#### The Data Structure (`messages.ts:199`)
+
+```json
+{
+  "type": "boxcar",
+  "tenantId": "my-tenant",
+  "documentId": "doc-101",
+  "contents": [
+    { "clientId": "user-A", "clientSequenceNumber": 1, "contents": "H" },
+    { "clientId": "user-A", "clientSequenceNumber": 2, "contents": "e" },
+    { "clientId": "user-B", "clientSequenceNumber": 1, "contents": "l" }
+  ]
+}
+```
+
+#### The 4 Critical Reasons Boxcars Exist:
+1. **Kafka Performance (10x–50x Speedup):** Writing 100 individual keystrokes to Kafka creates 100 TCP roundtrips, 100 partition index entries, and 100 disk commits. A Boxcar turns all 100 keystrokes into **1 single Kafka write, 1 partition offset, and 1 disk commit**.
+2. **Event-Loop Micro-Batching (`setImmediate` in `rdkafkaProducer.ts:302`):** When multiple ops arrive during the same Node.js event-loop tick, `rdkafkaProducer` coalesces them into one pending Boxcar before flushing to Kafka.
+3. **Guaranteed Atomic Arrival:** Because the envelope contains `documentId` at the root, Kafka hashes `murmur2(documentId)` and routes the entire bundle to the exact same partition at the exact same millisecond.
+4. **Downstream Bulk Processing (`scriptorium/lambda.ts:383`):** Consumers unpack the boxcar via `extractBoxcar(message)`. Scriptorium executes a single high-speed `opCollection.insertMany(boxcar.contents, false)` bulk write into MongoDB rather than 100 individual database roundtrips.
+
 ---
 
 ## 5. Kafka Messaging, Backpressure, and Scaling
