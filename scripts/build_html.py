@@ -271,6 +271,7 @@ def read_clean_svg(path):
     return svg_clean
 
 svg_routerlicious = read_clean_svg("/Users/dhiraj.thakur/project/FluidFramework/server/routerlicious/docs/Routerlicious-Architecture.svg")
+svg_routerlicious_hld = read_clean_svg("/Users/dhiraj.thakur/project/FluidFramework/server/routerlicious/docs/Routerlicious-HLD.svg")
 svg_connection_states = read_clean_svg("/Users/dhiraj.thakur/project/FluidFramework/docs/docs/build/images/ConnectionStates.svg")
 svg_sync_states = read_clean_svg("/Users/dhiraj.thakur/project/FluidFramework/docs/docs/build/images/SynchronizationStates.svg")
 
@@ -354,9 +355,35 @@ for part in parts[1:]:
     
     # Check if we should inject official SVG graphics
     extra_svg_html = ""
-    if sec_id == "3-routerlicious-server-architecture" and svg_routerlicious:
-        extra_svg_html = f'''
+    if sec_id == "3-routerlicious-server-architecture":
+        cards = []
+        if svg_routerlicious_hld:
+            cards.append(f'''
         <details class="official-graphic-card" open>
+          <summary class="official-graphic-summary">
+            <div class="summary-left">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+              <span>Routerlicious High-Level Design (HLD) — 4-Section Architectural Flow</span>
+            </div>
+            <span class="graphic-badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981;">Complete Op &amp; Summary Flow</span>
+          </summary>
+          <div class="svg-diagram-wrapper">
+            <div class="svg-diagram-content">
+              {svg_routerlicious_hld}
+            </div>
+            <div class="svg-diagram-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <span>Source: <code>server/routerlicious/docs/Routerlicious-HLD.excalidraw</code></span>
+              <div style="display: flex; gap: 14px;">
+                <a href="routerlicious-hld.html" target="_blank" style="color: var(--primary); text-decoration: none; font-weight: 600;">Standalone View ↗</a>
+                <a href="Routerlicious-HLD.excalidraw" download style="color: var(--text-muted); text-decoration: none;">Download .excalidraw</a>
+              </div>
+            </div>
+          </div>
+        </details>
+            ''')
+        if svg_routerlicious:
+            cards.append(f'''
+        <details class="official-graphic-card" style="margin-top: 20px;">
           <summary class="official-graphic-summary">
             <div class="summary-left">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
@@ -373,7 +400,8 @@ for part in parts[1:]:
             </div>
           </div>
         </details>
-        '''
+            ''')
+        extra_svg_html = '\n'.join(cards)
     elif sec_id == "20-container-lifecycle--detached--attaching--attached" and svg_connection_states:
         extra_svg_html = f'''
         <details class="official-graphic-card" open>
@@ -1888,6 +1916,13 @@ MASTER_HTML = f'''<!DOCTYPE html>
 
 with open(OUT_PATH, "w", encoding="utf-8") as f:
     f.write(MASTER_HTML)
+
+GUIDE_DIR = "/Users/dhiraj.thakur/project/fluid-framework-learning-guide"
+for target_name in ["index.html", "learning.html"]:
+    target_path = os.path.join(GUIDE_DIR, target_name)
+    with open(target_path, "w", encoding="utf-8") as f:
+        f.write(MASTER_HTML)
+    print(f"Synced to guide: {target_path}")
 
 print(f"Successfully generated: {OUT_PATH}")
 print(f"Final file size: {os.path.getsize(OUT_PATH)} bytes")

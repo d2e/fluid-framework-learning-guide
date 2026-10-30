@@ -6,9 +6,10 @@ An interactive, deep-dive architectural learning portal and visual reference for
 
 ## Included Documents
 
-- **[`index.html`](index.html) / [`learning.html`](learning.html)**: The master developer learning guide and interactive reference portal (~420 KB standalone offline document with search, category filters, and architectural diagrams).
+- **[`index.html`](index.html) / [`learning.html`](learning.html)**: The master developer learning guide and interactive reference portal with category navigation, full-text search, and embedded high-resolution diagrams.
+- **[`routerlicious-hld.html`](routerlicious-hld.html)**: Dedicated interactive High-Level Architecture (HLD) viewer with zoom, pan, and structured 4-section walkthrough (Component Map, Op Travel, Summary Travel, and Component Boundaries).
 - **[`deli-replica-design.html`](deli-replica-design.html)**: Standalone interactive visual dashboard covering Deli container replica sharding, Kafka partition topology, and pod failover lifecycles.
-- **[`Routerlicious-HLD.excalidraw`](Routerlicious-HLD.excalidraw)**: High-Level Architecture (HLD) diagram covering Client/App Layer, Routerlicious Service Plane (Alfred, Deli, Scribe, Scriptorium, Redis, Kafka), and Durable Storage & History (MongoDB, GitRest, Historian).
+- **[`Routerlicious-HLD.svg`](Routerlicious-HLD.svg)** / **[`Routerlicious-HLD.excalidraw`](Routerlicious-HLD.excalidraw)**: Vector SVG and source Excalidraw design assets for the Routerlicious service plane.
 
 ---
 
